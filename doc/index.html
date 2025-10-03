@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Professional AI Dashboard with Editor & API Key Management</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<button class="dark-mode-toggle" onclick="toggleDarkMode()">🌙</button>
+<div id="backdrop"></div>
+<button id="toggleApiKeysBtn" aria-pressed="false" aria-label="Toggle API Key Settings">API Keys ⚙️</button>
+<button id="toggleModelsBtn" aria-label="Toggle Model Settings">Models 🧠</button>
+<div id="apiKeyPanel" role="dialog" aria-modal="true" aria-labelledby="apiKeyPanelTitle" tabindex="-1">
+    <h2 id="apiKeyPanelTitle">API Keys Management</h2>
+    <label for="apiKeySelect">Select API Key</label>
+    <select id="apiKeySelect" aria-label="Select API Key"></select>
+    <label for="newApiKeyInput">New API Key</label>
+    <input type="text" id="newApiKeyInput" placeholder="Add new API key..." aria-label="New API key" />
+    <button id="addApiKeyBtn">Add / Save Key</button>
+    <button id="removeApiKeyBtn">Remove Key</button>
+    <button id="goBackApiKeysBtn">Go Back</button>
+</div>
+<div id="modelPanel" role="dialog" aria-modal="true" aria-labelledby="modelPanelTitle" tabindex="-1">
+    <h2 id="modelPanelTitle">Model Management</h2>
+    <label for="currentModelSelect">Current Model</label>
+    <select id="currentModelSelect" aria-label="Select Model"></select>
+    <label for="newModelInput">Add Custom Model</label>
+    <input type="text" id="newModelInput" placeholder="e.g., custom/model:id:name" aria-label="New Model" />
+    <button id="addModelBtn">Add Model</button>
+    <button id="removeModelBtn">Remove Model</button>
+    <div id="modelsList" style="max-height: 200px; overflow-y: auto; margin-top: 1rem;"></div>
+    <button id="goBackModelsBtn">Go Back</button>
+</div>
+<h1>AI Dashboard: Titles & Content</h1>
+<div class="flex-row">
+    <section aria-label="Title Generator">
+        <h2>Title Generator</h2>
+        <label for="keywordTitle">Keyword/Topic</label>
+        <input id="keywordTitle" list="keywordTitleList" placeholder="Enter keyword/topic" aria-label="Keyword for titles" autocomplete="off" />
+        <datalist id="keywordTitleList"></datalist>
+        <label class="checkbox-label"><input type="checkbox" id="howToCheckbox" /><span>"How to" Titles</span></label>
+        <label class="checkbox-label"><input type="checkbox" id="googleAskCheckbox" /><span>Google Ask Style</span></label>
+        <button id="generateTitlesBtn" aria-label="Generate titles">Generate Titles</button>
+        <button id="copyAllBtn" disabled>Copy All Titles</button>
+        <button id="clearTitlesBtn" class="clear-btn" style="display: none;">Clear Titles</button>
+        <div id="titles" aria-live="polite" style="margin-top: 1rem;"></div>
+        <div id="titleLoading" class="loading-container" style="display: none;">
+            <div class="spinner"></div>
+            <span class="loading-text">Generating titles...</span>
+        </div>
+        <div id="titleStatus" class="status-info" style="display: none;"></div>
+    </section>
+    <section aria-label="Content Generator">
+        <h2>Content Generator</h2>
+        <label for="contentTitleInput">Optional Content Title</label>
+        <input id="contentTitleInput" type="text" placeholder="Add or use a title" aria-label="Content Title" />
+        <label for="keywordContent">Keyword *</label>
+        <input id="keywordContent" list="keywordContentList" placeholder="Enter content keyword" aria-label="Content keyword" autocomplete="off" required />
+        <datalist id="keywordContentList"></datalist>
+        <label for="category">Category *</label>
+        <input id="category" list="categoryList" placeholder="Enter category" aria-label="Category" autocomplete="off" required />
+        <datalist id="categoryList"></datalist>
+        <label for="year">Year / Audience *</label>
+        <input id="year" list="yearList" placeholder="Enter year or audience" aria-label="Year or Audience" autocomplete="off" required />
+        <datalist id="yearList"></datalist>
+        <label for="country">Country</label>
+        <input id="country" list="countryList" placeholder="Enter country" aria-label="Country" autocomplete="off" />
+        <datalist id="countryList"></datalist>
+        <label for="suburb">Suburb</label>
+        <input id="suburb" list="suburbList" placeholder="Enter suburb" aria-label="Suburb" autocomplete="off" />
+        <datalist id="suburbList"></datalist>
+        <label class="checkbox-label"><input type="checkbox" id="genHowToCheckbox" /><span>Generate "How to" Title for AI Overview</span></label>
+        <label class="checkbox-label"><input type="checkbox" id="addTocCheckbox" /><span>Add Table of Contents (SEO only)</span></label>
+        <label for="maxWords">Maximum words (min 1500)</label>
+        <input id="maxWords" type="number" min="1500" placeholder="Enter min 1500" aria-label="Max words" value="2000" />
+        <div style="display: flex; gap: 1rem;">
+            <button id="copyPromptBtn" aria-label="Copy prompt">Copy Prompt</button>
+            <button id="generateContentBtn" aria-label="Generate content">Generate Content</button>
+            <button id="clearInputsBtn" class="clear-btn">Clear All Inputs</button>
+        </div>
+       
+        <pre id="outputPrompt" aria-live="polite" aria-label="Content prompt" style="background: #f3f4f6; color: #333; padding: 1rem; margin-top: 1rem; border-radius: 6px; white-space: pre-wrap; min-height: 120px; max-height: 150px; overflow-y: auto; border: 1px solid #d1d5db; font-size: 0.875rem;"></pre>
+        <div id="contentLoading" class="loading-container" style="display: none;">
+            <div class="spinner"></div>
+            <span class="loading-text">Generating content... (This may take a few moments)</span>
+        </div>
+        <div class="progress-bar" id="contentProgress" style="display: none;">
+            <div class="progress-fill"></div>
+        </div>
+        <div id="contentStatus" class="status-info" style="display: none;"></div>
+    </section>
+    <section aria-label="Generated Content editor">
+        <h2>Generated Content <span id="wordCount" style="font-weight: 400; font-size: 0.875rem; color: #6b7280;">(0 words)</span></h2>
+        <div id="toolbar" aria-label="Formatting toolbar">
+            <button type="button" title="Bold" onclick="execCmd('bold')"><b>B</b></button>
+            <button type="button" title="Italic" onclick="execCmd('italic')"><i>I</i></button>
+            <button type="button" title="H1" onclick="execCmd('formatBlock', '<h1>')">H1</button>
+            <button type="button" title="H2" onclick="execCmd('formatBlock', '<h2>')">H2</button>
+            <button type="button" title="H3" onclick="execCmd('formatBlock', '<h3>')">H3</button>
+            <button type="button" title="H4" onclick="execCmd('formatBlock', '<h4>')">H4</button>
+            <button type="button" title="Add Link" onclick="addLink()">🔗</button>
+            <button type="button" title="Remove Link" onclick="removeLink()">❌</button>
+            <button type="button" title="Add Image" onclick="addImage()">🖼️</button>
+            <button type="button" title="Undo" onclick="execCmd('undo')">↩️</button>
+            <button type="button" title="Redo" onclick="execCmd('redo')">↪️</button>
+            <button type="button" title="Copy Content" onclick="copyContentOutput()">📋 Copy</button>
+            <button type="button" title="Clear Content" onclick="clearContent()" class="clear-btn">Clear</button>
+            <button type="button" title="Export PDF" onclick="exportToPDF()">📄 PDF</button>
+            <button type="button" title="Format Spacing" onclick="formatSpacing()">📏 Spacing</button>
+            <button type="button" title="Human Review" onclick="humanReviewContent()" style="background-color: #10b981;">🧠 Review</button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap;">
+            <div id="contentTitleDisplay"></div>
+            <span class="copy-badge" style="cursor: pointer;" onclick="copyTitleFromDisplay();">Copy</span>
+        </div>
+        <div id="contentOutput" contenteditable="true" spellcheck="true" role="textbox" aria-multiline="true">
+            <div id="contentLoadingOverlay" class="content-loading-overlay" style="display: none;">
+                <div class="spinner" style="width: 40px; height: 40px; border-width: 4px;"></div>
+                <p>Generating content...</p>
+            </div>
+        </div>
+        <button id="saveDocBtn" aria-label="Save content as DOC" style="margin-top: 1rem;">Save as DOC</button>
+        <div id="recentGenerations">
+            <h3>Recent Generations</h3>
+            <div id="generationsList"></div>
+        </div>
+        <div id="editorStatus" class="status-info" style="display: none;"></div>
+    </section>
+</div>
+<section id="seoDashboard" aria-label="SEO and Social Media Strategies" style="display: none;">
+    <h2>SEO & Social Media Strategies</h2>
+    <nav id="seoToc" style="background: #f3f4f6; border-radius: 6px; padding: 1rem; max-height: 200px; overflow-y: auto; margin-bottom: 1rem; border: 1px solid #d1d5db; font-family: 'Monaco', 'Menlo', monospace; font-size: 0.875rem;"></nav>
+    <h3>Meta Title</h3>
+    <textarea id="metaTitle" rows="2" style="width: 100%; margin-bottom: 1rem;"></textarea>
+    <button onclick="copyText('metaTitle')">Copy Meta Title</button>
+    <h3>Meta Description</h3>
+    <textarea id="metaDescription" rows="3" style="width: 100%; margin-bottom: 1rem;"></textarea>
+    <button onclick="copyText('metaDescription')">Copy Meta Description</button>
+    <h3>Structured Data / Schema Markup</h3>
+    <pre id="schemaMarkup" style="width: 100%; max-height: 180px; overflow-y: auto; background: #f3f4f6; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; border: 1px solid #d1d5db;"></pre>
+    <button onclick="copyText('schemaMarkup')">Copy Structured Data</button>
+    <h3>Infographic Concept</h3>
+    <pre id="infographicConcept" style="width: 100%; max-height: 180px; overflow-y: auto; background: #f3f4f6; border-radius: 6px; padding: 1rem; border: 1px solid #d1d5db;"></pre>
+    <button onclick="copyText('infographicConcept')">Copy Infographic Concept</button>
+    <button id="clearSeoBtn" class="clear-btn" style="margin-top: 1rem;">Clear SEO Data</button>
+</section>
+<div id="footerBanner" role="contentinfo">Created by Siddharth | Build version 4.4 | Enhanced with Sequential SEO, Model Management, & More</div>
+<script>
+// Core constants and references
+const API_BASE = 'https://openrouter.ai/api/v1/chat/completions';
+const DEFAULT_API_KEY = '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';
+let generationApiKeys = [
+  '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',
+  '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',
+  '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'
+];
+let seoApiKey = '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';
+let availableModels = [
+  { id: 'xai/grok-3', name: 'xAI Grok 3 (Recommended)' },
+  { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini (Fast & Cheap)' },
+  { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet (High Quality)' },
+  { id: 'google/gemini-pro-1.5-exp', name: 'Gemini Pro 1.5 Experimental' },
+  { id: 'mistralai/mixtral-8x7b-instruct', name: 'Mixtral 8x7B Instruct' },
+  { id: 'openai/gpt-3.5-turbo', name: 'GPT-3.5 Turbo' },
+  { id: 'meta-llama/llama-3.1-8b-instruct:free', name: 'LLaMA 3.1 8B Instruct (Free)' },
+  { id: 'nousresearch/nous-capybara-7b:free', name: 'Nous Capybara 7B (Free)' },
+  { id: 'x-ai/grok-4-fast:free', name: 'xAI Grok 4 Fast (Free)' },
+  { id: 'nvidia/nemotron-nano-9b-v2:free', name: 'NVIDIA Nemotron Nano 9B v2 (Free)' },
+  { id: 'deepseek/deepseek-chat-v3.1:free', name: 'DeepSeek Chat v3.1 (Free)' },
+  { id: 'openai/gpt-oss-120b:free', name: 'GPT OSS 120B (Free)' },
+  { id: 'z-ai/glm-4.5-air:free', name: 'GLM 4.5 Air (Free)' },
+  { id: 'qwen/qwen3-coder:free', name: 'Qwen3 Coder (Free)' },
+  { id: 'moonshotai/kimi-k2:free', name: 'Kimi K2 (Free)' },
+  { id: 'cognitivecomputations/dolphin-mistral-24b-venice-edition:free', name: 'Dolphin Mistral 24B Venice Edition (Free)' },
+  { id: 'google/gemma-3n-e2b-it:free', name: 'Gemma 3N E2B IT (Free)' },
+  { id: 'mistralai/mistral-small-3.2-24b-instruct:free', name: 'Mistral Small 3.2 24B Instruct (Free)' },
+  { id: 'moonshotai/kimi-dev-72b:free', name: 'Kimi Dev 72B (Free)' },
+  { id: 'deepseek/deepseek-r1-0528-qwen3-8b:free', name: 'DeepSeek R1 0528 Qwen3 8B (Free)' },
+  { id: 'deepseek/deepseek-r1-0528:free', name: 'DeepSeek R1 0528 (Free)' }
+];
+let failedModels = new Set();
+let currentModel = 'xai/grok-3';
+let recentGenerations = JSON.parse(localStorage.getItem('recentGenerations') || '[]');
+// DOM references
+const apiKeySelect = document.getElementById('apiKeySelect');
+const addApiKeyBtn = document.getElementById('addApiKeyBtn');
+const removeApiKeyBtn = document.getElementById('removeApiKeyBtn');
+const newApiKeyInput = document.getElementById('newApiKeyInput');
+const currentModelSelect = document.getElementById('currentModelSelect');
+const newModelInput = document.getElementById('newModelInput');
+const addModelBtn = document.getElementById('addModelBtn');
+const removeModelBtn = document.getElementById('removeModelBtn');
+const modelsList = document.getElementById('modelsList');
+const keywordTitle = document.getElementById('keywordTitle');
+const howToCheckbox = document.getElementById('howToCheckbox');
+const googleAskCheckbox = document.getElementById('googleAskCheckbox');
+const copyAllBtn = document.getElementById('copyAllBtn');
+const clearTitlesBtn = document.getElementById('clearTitlesBtn');
+const titlesDiv = document.getElementById('titles');
+const titleLoading = document.getElementById('titleLoading');
+const titleStatus = document.getElementById('titleStatus');
+const contentTitleInput = document.getElementById('contentTitleInput');
+const keywordContent = document.getElementById('keywordContent');
+const categoryInput = document.getElementById('category');
+const yearInput = document.getElementById('year');
+const countryInput = document.getElementById('country');
+const suburbInput = document.getElementById('suburb');
+const genHowToCheckbox = document.getElementById('genHowToCheckbox');
+const addTocCheckbox = document.getElementById('addTocCheckbox');
+const maxWordsInput = document.getElementById('maxWords');
+const outputPrompt = document.getElementById('outputPrompt');
+const contentOutput = document.getElementById('contentOutput');
+const contentTitleDisplay = document.getElementById('contentTitleDisplay');
+const wordCountSpan = document.getElementById('wordCount');
+const generateContentBtn = document.getElementById('generateContentBtn');
+const generateTitlesBtn = document.getElementById('generateTitlesBtn');
+const copyPromptBtn = document.getElementById('copyPromptBtn');
+const clearInputsBtn = document.getElementById('clearInputsBtn');
+const saveDocBtn = document.getElementById('saveDocBtn');
+const contentLoading = document.getElementById('contentLoading');
+const contentProgress = document.getElementById('contentProgress');
+const contentStatus = document.getElementById('contentStatus');
+const editorStatus = document.getElementById('editorStatus');
+const seoDashboard = document.getElementById('seoDashboard');
+const seoToc = document.getElementById('seoToc');
+const metaTitleEl = document.getElementById('metaTitle');
+const metaDescriptionEl = document.getElementById('metaDescription');
+const schemaMarkupEl = document.getElementById('schemaMarkup');
+const infographicConceptEl = document.getElementById('infographicConcept');
+const clearSeoBtn = document.getElementById('clearSeoBtn');
+const contentLoadingOverlay = document.getElementById('contentLoadingOverlay');
+const generationsList = document.getElementById('generationsList');
+let currentTitles = [];
+// Input history management
+const inputFields = [
+  { id: 'keywordTitle', list: 'keywordTitleList' },
+  { id: 'keywordContent', list: 'keywordContentList' },
+  { id: 'category', list: 'categoryList' },
+  { id: 'year', list: 'yearList' },
+  { id: 'country', list: 'countryList' },
+  { id: 'suburb', list: 'suburbList' },
+  { id: 'contentTitleInput', list: null }
+];
+function saveInputHistory() {
+  inputFields.forEach(field => {
+    const value = document.getElementById(field.id).value.trim();
+    if (value && field.list) {
+      let history = JSON.parse(localStorage.getItem(`${field.id}_history`) || '[]');
+      if (!history.includes(value)) {
+        history.unshift(value);
+        if (history.length > 10) history.pop();
+        localStorage.setItem(`${field.id}_history`, JSON.stringify(history));
+      }
+    }
+  });
+}
+function loadInputHistory() {
+  inputFields.forEach(field => {
+    if (field.list) {
+      const history = JSON.parse(localStorage.getItem(`${field.id}_history`) || '[]');
+      const datalist = document.getElementById(field.list);
+      datalist.innerHTML = '';
+      history.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        datalist.appendChild(option);
+      });
+    }
+  });
+}
+// Clean Markdown
+function cleanMarkdown(text) {
+  if (!text) return '';
+  return text.replace(/\/\*\*\//g, '')
+            .replace(/\*\*/g, '')
+            .replace(/---/g, '')
+            .replace(/ - /g, ' ')
+            .replace(/^\s*#* /gm, '')
+            .trim();
+}
+// Build Prompt
+function buildPrompt() {
+  const k = keywordContent.value.trim();
+  const c = categoryInput.value.trim();
+  const y = yearInput.value.trim();
+  const countryVal = countryInput.value.trim();
+  const suburbVal = suburbInput.value.trim();
+  const contentTitleVal = contentTitleInput.value.trim();
+  if (!k || !c || !y) return 'Fill all required fields first (Keyword, Category, Year/Audience)';
+  let geoDesc = '';
+  let geoShort = '';
+  if (countryVal && suburbVal) {
+    geoDesc = ` in ${suburbVal}, ${countryVal}`;
+    geoShort = `${suburbVal}, ${countryVal}`;
+  } else if (countryVal) {
+    geoDesc = ` in ${countryVal}`;
+    geoShort = countryVal;
+  } else if (suburbVal) {
+    geoDesc = ` in ${suburbVal}`;
+    geoShort = suburbVal;
+  }
+  let maxWords = parseInt(maxWordsInput.value, 10);
+  if (isNaN(maxWords) || maxWords < 1500) maxWords = 1500;
+  let titleInstruction = contentTitleVal
+    ? `Use the provided title "${contentTitleVal}" as the content title. Then proceed with the full content below.\n`
+    : genHowToCheckbox.checked
+      ? 'First, generate a concise, AI Overview-friendly “How to...” title for this content (using the keyword, geo, and category if present). This title should be ready for Google AI Overviews, generative AI search, and snippet fetch. Then proceed with the full content below.\n'
+      : 'First, generate a concise, natural content title suitable for both human readers and general search (using the keyword, geo, and category if present). Then proceed with the full content below.\n';
+  let tocInstruction = addTocCheckbox.checked ? 'Include a Table of Contents at the beginning after the title.\n' : '';
+  let wordLimitInstruction = `Please limit the main content to approximately ${maxWords} words.\n`;
+  return `${titleInstruction}${tocInstruction}${wordLimitInstruction}
+Create a comprehensive content package on the keyword “${k}” tailored for the “${c}” category${geoDesc ? ' with a strong focus on Generative Engine Optimization (GEO)'+geoDesc : ''}. The content should:
+1. Be written in a natural, conversational tone that engages readers and maximizes dwell time.
+2. Be semantically rich, covering latent topics and related keywords around “${k}” and ${geoShort || 'the target location'}.
+3. Integrate geo-specific information including local regulations, providers, competitors, examples, and cultural nuances relevant to ${geoShort}.
+4. Use clear and structured formatting with H1 for the main title, H2 for main sections, H3 for subsections, bullet points for lists, and a Q&A section with 4–5 locally-relevant questions (questions in bold) to enhance readability and scannability.
+5. Answer 4–5 popular, locally-relevant questions about “${k}” from users in ${geoShort} in a dedicated Q&A section titled “Questions and Answers: Common Questions About ${k} in ${geoShort}”.
+6. Provide a unique, authoritative, and comprehensive conclusion summarizing key points and guiding next actionable steps relevant to ${c}${geoShort ? ` and ${geoShort}` : ''}, titled “Conclusion: Your Path to a Successful ${k} in ${geoShort || 'Australia'}”.`;
+}
+function updatePrompt() {
+  let p = buildPrompt();
+  outputPrompt.textContent = p || 'Update inputs to see the prompt here.';
+}
+// Title Generation
+generateTitlesBtn.onclick = async () => {
+  if (!seoApiKey) return showStatus(titleStatus, 'error', 'No SEO API key selected!');
+  if (!keywordTitle.value.trim()) return showStatus(titleStatus, 'error', 'Please enter a keyword for title generation.');
+  saveInputHistory();
+  titleLoading.style.display = 'flex';
+  titlesDiv.innerHTML = '';
+  generateTitlesBtn.disabled = true;
+  showStatus(titleStatus, 'info', 'Generating titles...');
+  const prompt = howToCheckbox.checked
+    ? `Generate 5 catchy SEO-friendly "How to" titles including the keyword: ${keywordTitle.value.trim()}`
+    : `Generate 5 catchy SEO-friendly titles including the keyword: ${keywordTitle.value.trim()}${googleAskCheckbox.checked ? ' phrased like Google Ask style' : ''}`;
+  try {
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${seoApiKey.trim()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: currentModel,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 1200,
+      }),
+    });
+    if (!res.ok) {
+      let err = await res.json().catch(() => null);
+      throw new Error(err?.error?.message || 'API error while generating titles');
+    }
+    const data = await res.json();
+    let text = data.choices?.[0]?.message?.content || '';
+    let lines = text.split('\n').map(line => line.replace(/^\d+[\).\s]+/, '').trim()).filter(Boolean);
+    currentTitles = lines.map(cleanMarkdown);
+    titlesDiv.innerHTML = '';
+    if (currentTitles.length === 0) {
+      showStatus(titleStatus, 'error', 'No titles generated. Try adjusting the prompt.');
+      return;
+    }
+    currentTitles.forEach(t => {
+      const div = document.createElement('div');
+      div.className = 'title-item';
+     
+      const textSpan = document.createElement('span');
+      textSpan.className = 'title-text';
+      textSpan.textContent = t;
+     
+      const buttonDiv = document.createElement('div');
+      buttonDiv.className = 'title-buttons';
+     
+      const useBtn = document.createElement('span');
+      useBtn.className = 'use-badge';
+      useBtn.textContent = 'Use';
+      useBtn.onclick = () => {
+        contentTitleInput.value = t;
+        saveInputHistory();
+        updatePrompt();
+        showStatus(editorStatus, 'success', 'Title applied to content generator.');
+      };
+      const copyBtn = document.createElement('span');
+      copyBtn.className = 'copy-badge';
+      copyBtn.textContent = 'Copy';
+      copyBtn.onclick = async () => {
+        await navigator.clipboard.writeText(t);
+        showStatus(titleStatus, 'success', 'Title copied to clipboard!');
+      };
+      buttonDiv.appendChild(useBtn);
+      buttonDiv.appendChild(copyBtn);
+      div.appendChild(textSpan);
+      div.appendChild(buttonDiv);
+      titlesDiv.appendChild(div);
+    });
+    copyAllBtn.disabled = false;
+    clearTitlesBtn.style.display = 'block';
+    showStatus(titleStatus, 'success', `${currentTitles.length} titles generated successfully.`);
+  } catch (error) {
+    showStatus(titleStatus, 'error', `Error generating titles: ${error.message}`);
+    failedModels.add(currentModel);
+    updateModelsList();
+  } finally {
+    titleLoading.style.display = 'none';
+    generateTitlesBtn.disabled = false;
+  }
+};
+copyAllBtn.onclick = () => {
+  if (currentTitles.length === 0) return;
+  navigator.clipboard.writeText(currentTitles.join('\n')).then(() => {
+    showStatus(titleStatus, 'success', 'All titles copied to clipboard!');
+  });
+};
+clearTitlesBtn.onclick = () => {
+  titlesDiv.innerHTML = '';
+  currentTitles = [];
+  copyAllBtn.disabled = true;
+  clearTitlesBtn.style.display = 'none';
+  titleStatus.style.display = 'none';
+};
+// Content Generation
+generateContentBtn.onclick = async () => {
+  if (generationApiKeys.length === 0) return showStatus(contentStatus, 'error', 'Add at least one API key before generating content.');
+  let prompt = buildPrompt();
+  if (prompt === 'Fill all required fields first') {
+    showStatus(contentStatus, 'error', prompt);
+    return;
+  }
+  // Validate required fields
+  if (!keywordContent.value.trim() || !categoryInput.value.trim() || !yearInput.value.trim()) {
+    showStatus(contentStatus, 'error', 'Please fill Keyword, Category, and Year/Audience fields.');
+    return;
+  }
+  saveInputHistory();
+  contentOutput.innerHTML = '';
+  contentTitleDisplay.textContent = '';
+  seoDashboard.style.display = 'none';
+  contentLoading.style.display = 'flex';
+  contentLoadingOverlay.style.display = 'flex';
+  contentProgress.style.display = 'block';
+  generateContentBtn.disabled = true;
+  generateContentBtn.textContent = 'Generating...';
+  showStatus(contentStatus, 'info', 'Generating content. This may take 30-60 seconds depending on the model.');
+  // Animate progress
+  setTimeout(() => {
+    contentProgress.querySelector('.progress-fill').style.width = '100%';
+  }, 100);
+  // Start model generating animation
+  const modelItem = document.querySelector(`[data-model="${currentModel}"]`);
+  if (modelItem) modelItem.classList.add('model-generating');
+  try {
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${generationApiKeys[0].trim()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: currentModel,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 4000,
+        temperature: 0.7,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      throw new Error(err?.error?.message || 'API error during content generation');
+    }
+    const data = await res.json();
+    let text = data.choices?.[0]?.message?.content || '';
+    if (!text.trim()) {
+      throw new Error('No content returned from API. Try a different model or check API key.');
+    }
+    text = text.replace(/^\s*#+\s*/gm, '');
+    const formattedContent = formatContent(text, contentTitleInput.value);
+    contentOutput.innerHTML = formattedContent;
+    let h1 = contentOutput.querySelector('h1');
+    if (h1) {
+      contentTitleDisplay.textContent = h1.textContent.trim();
+      h1.remove();
+    } else {
+      contentTitleDisplay.textContent = contentTitleInput.value || 'Generated Content';
+    }
+    updatePrompt();
+    updateWordCount();
+    showStatus(contentStatus, 'success', `Content generated successfully! (${getWordCount()} words)`);
+    // Save to recent
+    recentGenerations.unshift({
+      title: contentTitleDisplay.textContent,
+      content: text,
+      date: new Date().toISOString()
+    });
+    if (recentGenerations.length > 5) recentGenerations.pop();
+    localStorage.setItem('recentGenerations', JSON.stringify(recentGenerations));
+    updateRecentGenerations();
+    // Sequential SEO Generation
+    await generateSequentialSEO(text);
+  } catch (error) {
+    contentOutput.innerHTML = `<p style="color: red; font-weight: bold;">Error: ${error.message}</p>`;
+    showStatus(contentStatus, 'error', `Generation failed: ${error.message}. Check API key or try regenerating.`);
+    failedModels.add(currentModel);
+    updateModelsList();
+    updateWordCount();
+  } finally {
+    contentLoading.style.display = 'none';
+    contentLoadingOverlay.style.display = 'none';
+    contentProgress.style.display = 'none';
+    generateContentBtn.disabled = false;
+    generateContentBtn.textContent = 'Generate Content';
+    if (modelItem) modelItem.classList.remove('model-generating');
+  }
+};
+// Sequential SEO Generation
+async function generateSequentialSEO(content) {
+  const sections = [
+    { id: 'seoToc', label: 'Table of Contents', prompt: (c) => `Extract and format a Table of Contents from this content:\n${c}` },
+    { id: 'metaTitle', label: 'Meta Title', prompt: (c) => `Generate a meta title (under 60 chars) for content:\n${c}` },
+    { id: 'metaDescription', label: 'Meta Description', prompt: (c) => `Generate a meta description (under 160 chars) for content:\n${c}` },
+    { id: 'schemaMarkup', label: 'Structured Data', prompt: (c) => `Generate JSON-LD schema markup for Article based on:\n${c}` },
+    { id: 'infographicConcept', label: 'Infographic Concept', prompt: (c) => `Generate a detailed infographic concept description for:\n${c}` }
+  ];
+  for (const section of sections) {
+    editorStatus.textContent = `Generating ${section.label}...`;
+    editorStatus.style.display = 'block';
+    editorStatus.style.color = '#3b82f6';
+    try {
+      const res = await fetch(API_BASE, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${generationApiKeys[0].trim()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: currentModel,
+          messages: [{ role: 'user', content: section.prompt(content) }],
+          max_tokens: 500,
+        }),
+      });
+      if (!res.ok) throw new Error(`Failed to generate ${section.label}`);
+      const data = await res.json();
+      const result = data.choices?.[0]?.message?.content || '';
+      if (section.id === 'seoToc') {
+        seoToc.innerHTML = `<pre>${result}</pre>`;
+      } else if (section.id === 'metaTitle' || section.id === 'metaDescription') {
+        document.getElementById(section.id).value = result.trim();
+      } else {
+        document.getElementById(section.id).textContent = result.trim();
+      }
+      await new Promise(resolve => setTimeout(resolve, 500)); // Delay for sequential feel
+    } catch (e) {
+      console.error(`Error generating ${section.label}:`, e);
+    }
+  }
+  seoDashboard.style.display = 'block';
+  showStatus(editorStatus, 'success', 'SEO sections generated sequentially.');
+}
+// Format Content
+function formatContent(text, title) {
+  if (!text) return '<p>No content generated.</p>';
+  let formatted = text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^\*\s/gm, '<li>• ')
+    .replace(/^\d+\.\s/gm, '<li>$1. ')
+    .replace(/---/g, '<hr>')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/<p>\n*<li>/g, '<li>');
+  if (!formatted.startsWith('<p>')) formatted = '<p>' + formatted;
+  if (!formatted.endsWith('</p>')) formatted += '</p>';
+  let lines = formatted.split('\n').filter(line => line.trim());
+  let output = [];
+  let inList = false;
+  let listType = 'ul';
+  let paragraphLines = [];
+  let inQA = false;
+  lines.forEach((line, index) => {
+    let trimmed = line.trim();
+    if (trimmed.match(/^[A-Z][A-Za-z\s\.\,\!\?]+$/)) {
+      if (paragraphLines.length > 0) {
+        output.push(`<p>${paragraphLines.join(' ')}</p>`);
+        paragraphLines = [];
+      }
+      if (inList) {
+        output.push(`</${listType}>`);
+        inList = false;
+      }
+      if (inQA) {
+        output.push('</div>');
+        inQA = false;
+      }
+      if (trimmed.includes('Questions') || trimmed.includes('Q&A')) {
+        output.push(`<h2>${trimmed}</h2><div class="qa-section">`);
+        inQA = true;
+      } else if (trimmed.includes('Conclusion')) {
+        output.push(`<h2>${trimmed}</h2>`);
+      } else {
+        output.push(`<h2>${trimmed}</h2>`);
+      }
+      return;
+    }
+    if (trimmed.match(/^[A-Z][a-zA-Z\s]+$/ ) && trimmed.length < 80) {
+      if (paragraphLines.length > 0) {
+        output.push(`<p>${paragraphLines.join(' ')}</p>`);
+        paragraphLines = [];
+      }
+      if (inList) {
+        output.push(`</${listType}>`);
+        inList = false;
+      }
+      output.push(`<h3>${trimmed}</h3>`);
+      return;
+    }
+    if (trimmed.match(/^•\s/) || trimmed.match(/^\d+\.\s/)) {
+      if (paragraphLines.length > 0) {
+        output.push(`<p>${paragraphLines.join(' ')}</p>`);
+        paragraphLines = [];
+      }
+      if (!inList) {
+        listType = trimmed.match(/^\d+\.\s/) ? 'ol' : 'ul';
+        output.push(`<${listType}>`);
+        inList = true;
+      }
+      let listItem = trimmed.replace(/^•\s|^ \d+\.\s/, '');
+      output.push(`<li>${listItem}</li>`);
+      return;
+    }
+    if (inQA && (trimmed.match(/^\?/) || trimmed.match(/^[A-Z][a-zA-Z\s\?]+:/))) {
+      if (paragraphLines.length > 0) {
+        output.push(`<p>${paragraphLines.join(' ')}</p>`);
+        paragraphLines = [];
+      }
+      if (inList) {
+        output.push(`</${listType}>`);
+        inList = false;
+      }
+      let question = trimmed.replace(/^\?/, '').replace(/:$/, '');
+      output.push(`<p><strong>${question}:</strong></p>`);
+      return;
+    }
+    if (inList) {
+      output.push(`</${listType}>`);
+      inList = false;
+    }
+    paragraphLines.push(line);
+  });
+  if (inList) output.push(`</${listType}>`);
+  if (paragraphLines.length > 0) output.push(`<p>${paragraphLines.join(' ')}</p>`);
+  if (inQA) output.push('</div>');
+  if (title && !output.some(el => el.includes('<h1>'))) {
+    output.unshift(`<h1>${title}</h1>`);
+  }
+  return output.join('\n');
+}
+// Format Spacing
+function formatSpacing() {
+  if (getWordCount() === 0) return showStatus(editorStatus, 'error', 'No content to format.');
+ 
+  let content = contentOutput.innerHTML;
+ 
+  content = content
+    .replace(/<p[^>]*>(.*?)<\/p>/g, '<p style="margin-bottom: 1rem;">$1</p>')
+    .replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/g, '<h$& style="margin-top: 1.5rem; margin-bottom: 1rem;">')
+    .replace(/<(ul|ol)[^>]*>(.*?)<\/(ul|ol)>/g, '<$1 style="margin-top: 1rem; margin-bottom: 1rem;">$2</$3>')
+    .replace(/<li[^>]*>(.*?)<\/li>/g, '<li style="margin-bottom: 0.5rem;">$1</li>');
+ 
+  contentOutput.innerHTML = content;
+  updateWordCount();
+  showStatus(editorStatus, 'success', 'Spacing formatted successfully!');
+}
+// Human Review
+async function humanReviewContent() {
+  if (getWordCount() === 0) return showStatus(editorStatus, 'error', 'No content to review.');
+ 
+  const content = contentOutput.innerHTML;
+  const keyword = keywordContent.value.trim();
+ 
+  editorStatus.textContent = 'Reviewing content...';
+  editorStatus.style.display = 'block';
+  editorStatus.style.color = '#3b82f6';
+ 
+  const reviewPrompt = `Review the following generated content for the keyword "${keyword}". Act as a professional editor. Check for:
+1. Grammar, spelling, and punctuation errors.
+2. SEO optimization: keyword density, headings, readability.
+3. Structure: proper spacing, flow, engagement.
+4. Suggestions for improvement.
+Content:
+${contentOutput.innerText}
+Provide:
+- A revised version of the content with fixes.
+- Bullet points of key suggestions.
+Format as:
+**Revised Content:**
+[Revised HTML-friendly content]
+**Suggestions:**
+- Suggestion 1
+- Suggestion 2
+`;
+  try {
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${generationApiKeys[0].trim()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: currentModel,
+        messages: [{ role: 'user', content: reviewPrompt }],
+        max_tokens: 2000,
+        temperature: 0.5,
+      }),
+    });
+    if (!res.ok) {
+      throw new Error('API error during review');
+    }
+    const data = await res.json();
+    let reviewText = data.choices?.[0]?.message?.content || '';
+    const revisedMatch = reviewText.match(/<h1>.*?<\/h1>[\s\S]*?<\/div>/i) || reviewText.match(/<h1>[\s\S]*?<\/h1>/i);
+    const suggestionsMatch = reviewText.match(/Suggestions:[\s\S]*/i);
+    if (revisedMatch) {
+      contentOutput.innerHTML = revisedMatch[0];
+    } else {
+      contentOutput.innerHTML += `<div style="margin-top: 2rem; padding: 1rem; background: #f0f9ff; border-left: 4px solid #3b82f6;"><h3>Review Feedback:</h3><p>${reviewText}</p></div>`;
+    }
+    if (suggestionsMatch) {
+      editorStatus.innerHTML = `<strong>Suggestions Applied:</strong><ul>${suggestionsMatch[0].replace(/^- /gm, '<li>')}</ul>`;
+    } else {
+      editorStatus.textContent = 'Review completed. Check content for changes.';
+    }
+    updateWordCount();
+  } catch (error) {
+    showStatus(editorStatus, 'error', `Review failed: ${error.message}`);
+  }
+}
+// Update Word Count
+function updateWordCount() {
+  const txt = contentOutput.innerText || contentOutput.textContent || '';
+  const words = txt.trim().split(/\s+/).filter(Boolean).length;
+  const readingTime = Math.ceil(words / 200);
+  wordCountSpan.textContent = `(${words} words | ~${readingTime} min read)`;
+  return words;
+}
+let getWordCount = () => updateWordCount();
+contentOutput.addEventListener('input', () => {
+  updateWordCount();
+  showStatus(editorStatus, 'info', `Content updated. Current word count: ${getWordCount()}`);
+});
+// Editor functions
+function execCmd(cmd, value = null) {
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return;
+  document.execCommand(cmd, false, value);
+  contentOutput.focus();
+}
+function useTitleFromDisplay() {
+  contentTitleInput.value = contentTitleDisplay.textContent.trim();
+  updatePrompt();
+  showStatus(editorStatus, 'success', 'Title applied to content generator.');
+}
+function copyTitleFromDisplay() {
+  navigator.clipboard.writeText(contentTitleDisplay.textContent.trim()).then(() => {
+    showStatus(editorStatus, 'success', 'Title copied to clipboard!');
+  });
+}
+function clearContent() {
+  if (confirm('Clear all generated content?')) {
+    contentOutput.innerHTML = '';
+    contentTitleDisplay.textContent = '';
+    updateWordCount();
+    showStatus(editorStatus, 'info', 'Content cleared.');
+  }
+}
+function addLink() {
+  const url = prompt('Enter link URL:');
+  if (url) {
+    document.execCommand('createLink', false, url);
+    showStatus(editorStatus, 'success', 'Link added.');
+  }
+}
+function removeLink() {
+  document.execCommand('unlink');
+  showStatus(editorStatus, 'success', 'Link removed.');
+}
+function addImage() {
+  const url = prompt('Enter image URL:');
+  if (url) {
+    document.execCommand('insertImage', false, url);
+    showStatus(editorStatus, 'success', 'Image inserted.');
+  }
+}
+function exportToPDF() {
+  if (getWordCount() === 0) return showStatus(editorStatus, 'error', 'No content to export.');
+  const content = `<h1>${contentTitleDisplay.textContent}</h1>${contentOutput.innerHTML}`;
+  const iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  document.body.appendChild(iframe);
+  const doc = iframe.contentWindow.document;
+  doc.open();
+  doc.write(`
+    <html>
+      <head><title>${contentTitleDisplay.textContent || 'Generated Content'}</title>
+        <style>body { font-family: Inter, sans-serif; margin: 2cm; } h1, h2, h3 { color: #1e3a8a; }</style>
+      </head>
+      <body>${content}</body>
+    </html>
+  `);
+  doc.close();
+  setTimeout(() => {
+    iframe.contentWindow.print();
+    document.body.removeChild(iframe);
+    showStatus(editorStatus, 'success', 'PDF export initiated. Use browser print dialog.');
+  }, 500);
+}
+function copyContentOutput() {
+  navigator.clipboard.writeText(contentOutput.innerText).then(() => {
+    showStatus(editorStatus, 'success', 'Content copied to clipboard!');
+  }).catch(() => showStatus(editorStatus, 'error', 'Copy failed.'));
+}
+function copyText(elementId) {
+  const element = document.getElementById(elementId);
+  navigator.clipboard.writeText(element.value || element.textContent).then(() => {
+    showStatus(editorStatus, 'success', `${elementId.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} copied!`);
+  }).catch(() => showStatus(editorStatus, 'error', 'Copy failed.'));
+}
+saveDocBtn.onclick = () => {
+  if (getWordCount() === 0) return showStatus(editorStatus, 'error', 'No content to save.');
+  const keyword = keywordContent.value.trim() || 'content';
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const filename = `${keyword.replace(/\s+/g, '_')}_${dateStr}.doc`;
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body { font-family: Inter, sans-serif; }</style></head><body><h1>${contentTitleDisplay.textContent}</h1>${contentOutput.innerHTML}</body></html>`;
+  const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+  showStatus(editorStatus, 'success', `Content saved as ${filename}`);
+};
+copyPromptBtn.onclick = () => {
+  navigator.clipboard.writeText(outputPrompt.textContent).then(() => {
+    showStatus(contentStatus, 'success', 'Prompt copied to clipboard!');
+  });
+};
+clearInputsBtn.onclick = () => {
+  if (confirm('Clear all inputs?')) {
+    [keywordContent, categoryInput, yearInput, countryInput, suburbInput, contentTitleInput, maxWordsInput].forEach(el => el.value = '');
+    [genHowToCheckbox, addTocCheckbox].forEach(cb => cb.checked = false);
+    outputPrompt.textContent = '';
+    updatePrompt();
+    showStatus(contentStatus, 'info', 'Inputs cleared.');
+  }
+};
+clearSeoBtn.onclick = () => {
+  if (confirm('Clear all SEO data?')) {
+    metaTitleEl.value = '';
+    metaDescriptionEl.value = '';
+    schemaMarkupEl.textContent = '';
+    infographicConceptEl.textContent = '';
+    seoToc.innerHTML = '';
+    showStatus(editorStatus, 'info', 'SEO data cleared.');
+  }
+};
+function showStatus(element, type, message) {
+  element.innerHTML = message;
+  element.style.display = 'block';
+  element.style.color = type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : '#3b82f6';
+  element.style.borderLeftColor = type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : '#3b82f6';
+  setTimeout(() => { element.style.display = 'none'; }, 5000);
+}
+// API Key Management
+function saveKeys() {
+  localStorage.setItem('gen_api_keys', JSON.stringify(generationApiKeys));
+  localStorage.setItem('seo_api_key', seoApiKey);
+}
+function loadKeys() {
+  const genKeys = JSON.parse(localStorage.getItem('gen_api_keys') || '[]');
+  if (genKeys && Array.isArray(genKeys) && genKeys.length > 0) generationApiKeys = genKeys;
+  const seoKey = localStorage.getItem('seo_api_key');
+  if (seoKey && generationApiKeys.includes(seoKey)) seoApiKey = seoKey;
+  else seoApiKey = generationApiKeys[0] || DEFAULT_API_KEY;
+  renderKeys();
+}
+function renderKeys() {
+  apiKeySelect.innerHTML = '';
+  generationApiKeys.forEach((k, i) => {
+    const option = document.createElement('option');
+    option.value = k;
+    option.textContent = i === 0 ? 'Primary API Key (SEO & Content)' : `Backup Key ${i}`;
+    if (k === seoApiKey) option.selected = true;
+    apiKeySelect.appendChild(option);
+  });
+  removeApiKeyBtn.disabled = generationApiKeys.length <= 1;
+}
+addApiKeyBtn.onclick = () => {
+  const val = newApiKeyInput.value.trim();
+  if (!val) return alert('Please enter a valid API key');
+  if (!generationApiKeys.includes(val)) {
+    generationApiKeys.push(val);
+    saveKeys();
+    renderKeys();
+    newApiKeyInput.value = '';
+    alert('API Key added successfully!');
+  }
+};
+removeApiKeyBtn.onclick = () => {
+  const val = apiKeySelect.value;
+  if (generationApiKeys.length <= 1) {
+    alert('Cannot remove the last API key.');
+    return;
+  }
+  generationApiKeys = generationApiKeys.filter(k => k !== val);
+  seoApiKey = generationApiKeys[0];
+  saveKeys();
+  renderKeys();
+};
+apiKeySelect.onchange = e => {
+  seoApiKey = e.target.value;
+  saveKeys();
+};
+// Models Management
+function populateCurrentModelSelect() {
+  currentModelSelect.innerHTML = '';
+  availableModels.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.name;
+    currentModelSelect.appendChild(opt);
+  });
+  currentModelSelect.value = currentModel;
+}
+function updateModelsList() {
+  modelsList.innerHTML = '';
+  availableModels.forEach(model => {
+    const div = document.createElement('div');
+    div.className = `model-item ${failedModels.has(model.id) ? 'model-failed' : ''}`;
+    div.dataset.model = model.id;
+    div.innerHTML = `
+      <span class="model-name">${model.name}</span>
+      <span class="model-status">${failedModels.has(model.id) ? 'Failed' : 'Ready'}</span>
+    `;
+    modelsList.appendChild(div);
+  });
+}
+addModelBtn.onclick = () => {
+  const val = newModelInput.value.trim();
+  if (!val) return alert('Please enter a valid model ID and name');
+  const [id, name] = val.split(':');
+  if (availableModels.some(m => m.id === id)) return alert('Model already exists');
+  availableModels.push({ id, name: name || id });
+  updateModelsList();
+  populateCurrentModelSelect();
+  newModelInput.value = '';
+  alert('Model added successfully!');
+};
+removeModelBtn.onclick = () => {
+  const val = currentModelSelect.value;
+  availableModels = availableModels.filter(m => m.id !== val);
+  currentModel = availableModels[0]?.id || '';
+  updateModelsList();
+  populateCurrentModelSelect();
+  alert('Model removed successfully!');
+};
+currentModelSelect.onchange = (e) => {
+  currentModel = e.target.value;
+  localStorage.setItem('currentModel', currentModel);
+};
+// Recent generations
+function updateRecentGenerations() {
+  generationsList.innerHTML = '';
+  recentGenerations.slice(0, 5).forEach(gen => {
+    const div = document.createElement('div');
+    div.className = 'generation-item';
+    div.innerHTML = `<strong>${gen.title}</strong> - ${new Date(gen.date).toLocaleDateString()}`;
+    div.onclick = () => {
+      contentTitleDisplay.textContent = gen.title;
+      contentOutput.innerHTML = formatContent(gen.content, gen.title);
+      updateWordCount();
+      showStatus(editorStatus, 'success', 'Loaded recent generation.');
+    };
+    generationsList.appendChild(div);
+  });
+}
+// Dark mode
+function toggleDarkMode() {
+  document.body.classList.toggle('dark');
+  const isDark = document.body.classList.contains('dark');
+  localStorage.setItem('darkMode', isDark);
+  document.querySelector('.dark-mode-toggle').textContent = isDark ? '☀️' : '🌙';
+}
+if (localStorage.getItem('darkMode') === 'true') {
+  document.body.classList.add('dark');
+  document.querySelector('.dark-mode-toggle').textContent = '☀️';
+}
+// Attach listeners
+function attachInputListeners() {
+  [keywordContent, categoryInput, yearInput, countryInput, suburbInput, contentTitleInput, maxWordsInput, keywordTitle].forEach(el => {
+    el.addEventListener('input', () => {
+      saveInputHistory();
+      if (el.hasAttribute('required') && !el.value.trim()) {
+        el.style.borderColor = '#ef4444';
+      } else {
+        el.style.borderColor = '#d1d5db';
+      }
+      updatePrompt();
+    });
+  });
+  [genHowToCheckbox, addTocCheckbox].forEach(cb => cb.addEventListener('change', updatePrompt));
+}
+// Modal with backdrop
+const toggleApiKeysBtn = document.getElementById('toggleApiKeysBtn');
+const apiKeyPanel = document.getElementById('apiKeyPanel');
+const goBackApiKeysBtn = document.getElementById('goBackApiKeysBtn');
+const toggleModelsBtn = document.getElementById('toggleModelsBtn');
+const modelPanel = document.getElementById('modelPanel');
+const goBackModelsBtn = document.getElementById('goBackModelsBtn');
+const backdrop = document.getElementById('backdrop');
+toggleApiKeysBtn.onclick = () => {
+  apiKeyPanel.style.display = 'block';
+  backdrop.style.display = 'block';
+  toggleApiKeysBtn.style.display = 'none';
+  apiKeyPanel.focus();
+};
+goBackApiKeysBtn.onclick = () => {
+  apiKeyPanel.style.display = 'none';
+  backdrop.style.display = 'none';
+  toggleApiKeysBtn.style.display = 'inline-block';
+};
+toggleModelsBtn.onclick = () => {
+  modelPanel.style.display = 'block';
+  backdrop.style.display = 'block';
+  toggleModelsBtn.style.display = 'none';
+  modelPanel.focus();
+};
+goBackModelsBtn.onclick = () => {
+  modelPanel.style.display = 'none';
+  backdrop.style.display = 'none';
+  toggleModelsBtn.style.display = 'inline-block';
+};
+backdrop.onclick = () => {
+  if (apiKeyPanel.style.display === 'block') goBackApiKeysBtn.onclick();
+  if (modelPanel.style.display === 'block') goBackModelsBtn.onclick();
+};
+// Init
+window.onload = () => {
+  loadKeys();
+  renderKeys();
+  loadInputHistory();
+  updatePrompt();
+  updateWordCount();
+  attachInputListeners();
+  maxWordsInput.value = 2000;
+  updateModelsList();
+  populateCurrentModelSelect();
+  updateRecentGenerations();
+  currentModel = localStorage.getItem('currentModel') || 'xai/grok-3';
+  currentModelSelect.value = currentModel;
+};
+</script>
+</body>
+</html>

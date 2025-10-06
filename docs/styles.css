@@ -26,6 +26,10 @@ section {
     margin-bottom: 1.5rem;
     transition: box-shadow 0.3s ease;
     border: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    flex-grow: 1;
 }
 
 section:hover {
@@ -70,7 +74,7 @@ input[type="text"], input[type="number"], select, textarea {
     box-sizing: border-box;
     outline: none;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
-    margin-bottom: 1rem;
+    margin: 1rem 0;
 }
 
 input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
@@ -82,7 +86,7 @@ label {
     font-size: 0.875rem;
     font-weight: 500;
     color: #4b5563;
-    margin-bottom: 0.5rem;
+    margin: 1rem 0 0.5rem;
     display: block;
 }
 
@@ -220,6 +224,33 @@ button:disabled {
     flex-grow: 1;
 }
 
+#titles {
+  margin-top: 1rem;
+  max-height: 800px; /* always allow display up to 600px before scroll */
+  overflow-y: auto;
+  min-height: 240px; /* at least enough for 6 titles at 40px each */
+}
+
+/* Ensures each .title-item takes up enough vertical space */
+.title-item {
+  min-height: 40px;
+  padding: 0.75rem 1rem;
+}
+
+/* Model Dropdown for Generated Content Heading */
+.generated-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.model-select-drop {
+  min-width: 220px;
+  margin-left: 1rem;
+}
+
+
 #seoDashboard {
     background: #ffffff;
     padding: 1.5rem;
@@ -227,6 +258,12 @@ button:disabled {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     margin-top: 2rem;
     border: 1px solid #e5e7eb;
+    max-height: 600px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    flex-grow: 1;
 }
 
 #seoDashboard h2, #seoDashboard h3 {
@@ -247,10 +284,12 @@ button:disabled {
     resize: vertical;
     width: 100%;
     font-family: 'Monaco', 'Menlo', monospace;
+    max-height: 180px;
+    overflow-y: auto;
 }
 
 #seoDashboard pre {
-    max-height: 200px;
+    max-height: 180px;
     overflow-y: auto;
     white-space: pre-wrap;
 }
@@ -394,13 +433,10 @@ button:disabled {
     margin: 0.5rem 0;
     font-size: 0.875rem;
     color: #333;
-    background: #f3f4f6;
     padding: 0.75rem 1rem;
-    border-radius: 6px;
     transition: background 0.3s ease;
     width: 100%;
     box-sizing: border-box;
-    border: 1px solid #e5e7eb;
 }
 
 .title-item:hover {
@@ -600,6 +636,11 @@ body.dark #contentOutput {
     border-color: #4b5563;
 }
 
+body.dark #titles {
+    border-color: #6b7280;
+    background: #374151;
+}
+
 body.dark h1, body.dark h2, body.dark h3, body.dark h4, body.dark #contentOutput h1, body.dark #contentOutput h2, body.dark #contentOutput h3, body.dark #contentOutput h4 {
     color: #60a5fa;
 }
@@ -770,63 +811,55 @@ body.dark .progress-bar {
     background: #4b5563;
 }
 
-body.dark .progress-fill {
-    background: #3b82f6;
+.centered-dropdown-container {
+  display: flex;
+  justify-content: center;  /* centers the dropdown horizontally */
 }
 
-body.dark .generation-item {
-    background: #4b5563;
+.model-select-drop {
+  width: 250px;       /* fixed width, adjust as needed */
+  max-width: 100%;    /* responsive fallback */
+  box-sizing: border-box;
 }
 
-body.dark .generation-item:hover {
-    background: #6b7280;
+#titleLoading, #titleStatus {
+  margin-top: 1rem;
 }
 
-body.dark #footerBanner {
-    background: #374151;
-    color: #d1d5db;
-    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+/* --- Control Buttons --- */
+#toggleApiKeysBtn,
+#toggleModelsBtn {
+  position: fixed;
+  right: 1rem;
+  padding: 0.6rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 1000;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: background 0.2s ease;
 }
 
-body.dark #outputPrompt {
-    background: #4b5563;
-    color: #f9fafb;
-    border-color: #6b7280;
+#toggleApiKeysBtn:hover,
+#toggleModelsBtn:hover {
+  background: #1d4ed8;
 }
 
-#titles {
-    max-height: 300px;
-    overflow-y: auto;
+/* Stack them vertically */
+#toggleApiKeysBtn {
+  top: 1rem;
 }
 
-#generationsList {
-    max-height: 200px;
-    overflow-y: auto;
+#toggleModelsBtn {
+  top: 4rem; /* pushes Models below API Keys */
 }
 
-@media (max-width: 1024px) {
-    .flex-row {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-
-    section {
-        padding: 1rem;
-    }
-
-    h1 {
-        font-size: 2rem;
-    }
-
-    h2 {
-        font-size: 1.25rem;
-    }
-
-    #contentOutput {
-        max-height: none;
-    }
-
-    #toggleModelsBtn {
-        right: 60px;
-    }
+/* Optional: smaller screens, stack a bit closer */
+@media (max-width: 600px) {
+  #toggleModelsBtn {
+    top: 3.5rem;
+  }
 }

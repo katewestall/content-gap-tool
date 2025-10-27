@@ -953,6 +953,16 @@
                                     </select>
                                 </div>
 
+                                <!-- Aspect Ratio Selection -->
+                                <div class="mb-3">
+                                    <label for="aspectRatioSelect" class="form-label">Aspect Ratio</label>
+                                    <select class="form-select" id="aspectRatioSelect">
+                                        <option value="1024x1024">Square (1:1)</option>
+                                        <option value="1024x1792">Portrait (9:16)</option>
+                                        <option value="1792x1024">Landscape (16:9)</option>
+                                    </select>
+                                </div>
+
                                 <!-- Prompt Input -->
                                 <div class="mb-3">
                                     <label for="promptInput" class="form-label">Prompt</label>
@@ -1152,7 +1162,7 @@
             <div class="footer-bottom">
                 <div class="row align-items-center">
                     <div class="col-md-6">
-                        <p class="copyright mb-0">© 2025 Content Gap Tool. All rights reserved.</p>
+                        <p class="copyright mb-0">© 2023 Content Gap Tool. All rights reserved.</p>
                     </div>
                     <div class="col-md-6 text-md-end">
                         <div class="footer-features">
@@ -1886,12 +1896,12 @@
         }
         
         // Function to call the A4F Image API
-        async function callA4FImageAPI(apiKey, model, prompt) {
+        async function callA4FImageAPI(apiKey, model, prompt, size) {
             const requestBody = {
                 model: model,
                 prompt: prompt,
                 n: 1,
-                size: "1024x1024"
+                size: size
             };
             
             const response = await fetch(`${A4F_API_BASE}/images/generations`, {
@@ -1925,6 +1935,7 @@
         async function generateImage() {
             const apiProvider = document.getElementById('imageApiSelect').value;
             const model = document.getElementById('modelSelect').value;
+            const size = document.getElementById('aspectRatioSelect').value;
             const prompt = document.getElementById('promptInput').value.trim();
             
             const apiKey = getCurrentApiKey(apiProvider);
@@ -1942,7 +1953,7 @@
             document.querySelector('#generateBtn .loading-spinner').style.display = 'inline-block';
             
             try {
-                const response = await callA4FImageAPI(apiKey, model, prompt);
+                const response = await callA4FImageAPI(apiKey, model, prompt, size);
                 displayGeneratedImage(response, model, prompt);
             } catch (error) {
                 console.error('Error generating image:', error);
@@ -1982,14 +1993,73 @@
             }
         }
         
-        // Download image
+        // Download image function - FIXED
         function downloadImage(imageUrl, prompt) {
-            const link = document.createElement('a');
-            link.href = imageUrl;
-            link.download = `generated-image-${Date.now()}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            // Create a new image element to load the image
+            const img = new Image();
+            
+            // Set crossOrigin to handle potential CORS issues
+            img.crossOrigin = 'anonymous';
+            
+            img.onload = function() {
+                // Create a canvas element
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Set canvas dimensions to match the image
+                canvas.width = img.width;
+                canvas.height = img.height;
+                
+                // Draw the image on the canvas
+                ctx.drawImage(img, 0, 0);
+                
+                // Convert canvas to JPEG blob
+                canvas.toBlob(function(blob) {
+                    // Create a download link
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    
+                    // Generate filename from prompt or use default
+                    const filename = prompt 
+                        ? `generated-image-${prompt.substring(0, 20).replace(/[^a-z0-9]/gi, '_').toLowerCase()}.jpg`
+                        : `generated-image-${Date.now()}.jpg`;
+                    
+                    link.download = filename;
+                    
+                    // Trigger the download
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    // Clean up the object URL
+                    URL.revokeObjectURL(link.href);
+                }, 'image/jpeg', 0.9); // 90% quality for JPEG
+            };
+            
+            img.onerror = function() {
+                // Fallback method if canvas approach fails due to CORS
+                const link = document.createElement('a');
+                link.href = imageUrl;
+                link.target = '_blank';
+                
+                // Generate filename
+                const filename = prompt 
+                    ? `generated-image-${prompt.substring(0, 20).replace(/[^a-z0-9]/gi, '_').toLowerCase()}.jpg`
+                    : `generated-image-${Date.now()}.jpg`;
+                
+                link.download = filename;
+                
+                // Try to trigger download
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Show notification about potential CORS issues
+                showStatus(editorStatus, 'info', 'Image downloaded. If it opened in a new tab instead of downloading, the image server may not allow direct downloads due to CORS restrictions.');
+            };
+            
+            // Start loading the image
+            img.src = imageUrl;
         }
         
         // Download content

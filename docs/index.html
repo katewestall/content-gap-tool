@@ -651,6 +651,13 @@
                                     <datalist id="keywordTitleList"></datalist>
                                 </div>
 
+                                <!-- Category Input -->
+                                <div class="mb-3">
+                                    <label for="titleCategory" class="form-label">Category</label>
+                                    <input id="titleCategory" list="titleCategoryList" class="form-control" placeholder="Enter category" autocomplete="off" />
+                                    <datalist id="titleCategoryList"></datalist>
+                                </div>
+
                                 <!-- Title Options -->
                                 <div class="mb-3">
                                     <div class="form-check">
@@ -747,6 +754,12 @@
                                 <div class="mb-3">
                                     <label for="contentTitleInput" class="form-label">Optional Content Title</label>
                                     <input id="contentTitleInput" type="text" class="form-control" placeholder="Add or use a title" />
+                                </div>
+
+                                <!-- URL Input -->
+                                <div class="mb-3">
+                                    <label for="urlInput" class="form-label">URL *</label>
+                                    <input id="urlInput" type="url" class="form-control" placeholder="Enter URL for content reference" required />
                                 </div>
 
                                 <!-- Keyword Input -->
@@ -1260,6 +1273,10 @@
         let currentTitles = [];
         let imageHistory = JSON.parse(localStorage.getItem('imageHistory') || '[]');
         
+        // Store the current title generation parameters
+        let currentTitleKeyword = '';
+        let currentTitleCategory = '';
+        
         // DOM references
         const apiProviderSelect = document.getElementById('apiProviderSelect');
         const apiKeySelect = document.getElementById('apiKeySelect');
@@ -1274,6 +1291,7 @@
         const removeA4FModelsBtn = document.getElementById('removeA4FModelsBtn');
         const modelsList = document.getElementById('modelsList');
         const keywordTitle = document.getElementById('keywordTitle');
+        const titleCategory = document.getElementById('titleCategory');
         const howToCheckbox = document.getElementById('howToCheckbox');
         const googleAskCheckbox = document.getElementById('googleAskCheckbox');
         const copyAllBtn = document.getElementById('copyAllBtn');
@@ -1282,6 +1300,7 @@
         const titleLoading = document.getElementById('titleLoading');
         const titleStatus = document.getElementById('titleStatus');
         const contentTitleInput = document.getElementById('contentTitleInput');
+        const urlInput = document.getElementById('urlInput');
         const keywordContent = document.getElementById('keywordContent');
         const categoryInput = document.getElementById('category');
         const yearInput = document.getElementById('year');
@@ -1504,12 +1523,14 @@
         // Input history management
         const inputFields = [
             { id: 'keywordTitle', list: 'keywordTitleList' },
+            { id: 'titleCategory', list: 'titleCategoryList' },
             { id: 'keywordContent', list: 'keywordContentList' },
             { id: 'category', list: 'categoryList' },
             { id: 'year', list: 'yearList' },
             { id: 'country', list: 'countryList' },
             { id: 'suburb', list: 'suburbList' },
-            { id: 'contentTitleInput', list: null }
+            { id: 'contentTitleInput', list: null },
+            { id: 'urlInput', list: null }
         ];
         
         function saveInputHistory() {
@@ -1590,13 +1611,16 @@
         
         // Build Prompt
         function buildPrompt() {
+            const url = urlInput.value.trim();
             const k = keywordContent.value.trim();
             const c = categoryInput.value.trim();
             const y = yearInput.value.trim();
             const countryVal = countryInput.value.trim();
             const suburbVal = suburbInput.value.trim();
             const contentTitleVal = contentTitleInput.value.trim();
-            if (!k || !c || !y) return 'Fill all required fields first (Keyword, Category, Year/Audience)';
+            
+            if (!url || !k || !c || !y) return 'Fill all required fields first (URL, Keyword, Category, Year/Audience)';
+            
             let geoDesc = '';
             let geoShort = '';
             if (countryVal && suburbVal) {
@@ -1609,16 +1633,20 @@
                 geoDesc = ` in ${suburbVal}`;
                 geoShort = suburbVal;
             }
+            
             let maxWords = parseInt(maxWordsInput.value, 10);
             if (isNaN(maxWords) || maxWords < 1500) maxWords = 1500;
+            
             let titleInstruction = contentTitleVal
                 ? `Use the provided title "${contentTitleVal}" as the content title. Then proceed with the full content below.\n`
                 : genHowToCheckbox.checked
                   ? 'First, generate a concise, AI Overview-friendly "How to..." title for this content (using the keyword, geo, and category if present). This title should be ready for Google AI Overviews, generative AI search, and snippet fetch. Then proceed with the full content below.\n'
                   : 'First, generate a concise, natural content title suitable for both human readers and general search (using the keyword, geo, and category if present). Then proceed with the full content below.\n';
+            
             let tocInstruction = addTocCheckbox.checked ? 'Include a Table of Contents at the beginning after the title.\n' : '';
             let wordLimitInstruction = `Please limit the main content to approximately ${maxWords} words.\n`;
-            return `${titleInstruction}${tocInstruction}${wordLimitInstruction}Create a comprehensive content package on the keyword "${k}" tailored for the "${c}" category${geoDesc ? ' with a strong focus on Generative Engine Optimization (GEO)'+geoDesc : ''}. The content should:1. Be written in a natural, conversational tone that engages readers and maximizes dwell time.2. Be semantically rich, covering latent topics and related keywords around "${k}" and ${geoShort || 'the target location'}.3. Integrate geo-specific information including local regulations, providers, competitors, examples, and cultural nuances relevant to ${geoShort}.4. Use clear and structured formatting with H1 for the main title, H2 for main sections, H3 for subsections, bullet points for lists, and a Q&A section with 4–5 locally-relevant questions (questions in bold) to enhance readability and scannability.5. Answer 4–5 popular, locally-relevant questions about "${k}" from users in ${geoShort} in a dedicated Q&A section titled "Questions and Answers: Common Questions About ${k} in ${geoShort}".6. Content must have proper density keyword "${k}" with meaning full sentence where it is necessary.7. Provide a unique, authoritative, and comprehensive conclusion summarizing key points and guiding next actionable steps relevant to ${c}${geoShort ? ` and ${geoShort}` : ''}, titled "Conclusion: Your Path to a Successful ${k} in ${geoShort || 'Australia'}".`;
+            
+            return `${titleInstruction}${tocInstruction}${wordLimitInstruction}Create a comprehensive content package on the keyword "${k}" tailored for the "${c}" category${geoDesc ? ' with a strong focus on Generative Engine Optimization (GEO)'+geoDesc : ''}. The content should:1. Be written in a natural, conversational tone that engages readers and maximizes dwell time.2. Be semantically rich, covering latent topics and related keywords around "${k}" and ${geoShort || 'the target location'}.3. Integrate geo-specific information including local regulations, providers, competitors, examples, and cultural nuances relevant to ${geoShort}.4. Use clear and structured formatting with H1 for the main title, H2 for main sections, H3 for subsections, bullet points for lists, and a Q&A section with 4–5 locally-relevant questions (questions in bold) to enhance readability and scannability.5. Answer 4–5 popular, locally-relevant questions about "${k}" from users in ${geoShort} in a dedicated Q&A section titled "Questions and Answers: Common Questions About ${k} in ${geoShort}".6. Content must have proper density keyword "${k}" with meaning full sentence where it is necessary.7. Provide a unique, authoritative, and comprehensive conclusion summarizing key points and guiding next actionable steps relevant to ${c}${geoShort ? ` and ${geoShort}` : ''}, titled "Conclusion: Your Path to a Successful ${k} in ${geoShort || 'Australia'}".8. Focus solely on content relevant to the URL: ${url}.9. Use simple language without fancy words or business names.10. Do not use the phrase "isn't just" in the content.`;
         }
         
         function updatePrompt() {
@@ -1637,8 +1665,13 @@
         generateTitlesBtn.onclick = async () => {
             const apiProvider = document.getElementById('titleApiSelect').value;
             const model = document.getElementById('titleModelSelect').value;
+            const category = titleCategory.value.trim();
             
             if (!keywordTitle.value.trim()) return showStatus(titleStatus, 'error', 'Please enter a keyword for title generation.');
+            
+            // Store current title generation parameters
+            currentTitleKeyword = keywordTitle.value.trim();
+            currentTitleCategory = category;
             
             const apiKey = getCurrentApiKey(apiProvider);
             if (!apiKey) return showStatus(titleStatus, 'error', `No API key configured for ${apiProvider}. Please add an API key in the management panel.`);
@@ -1651,8 +1684,8 @@
             showStatus(titleStatus, 'info', 'Generating titles...');
             
             const prompt = howToCheckbox.checked
-                ? `Generate 20 catchy SEO-friendly "How to" titles including the keyword: ${keywordTitle.value.trim()}`
-                : `Generate 20 catchy SEO-friendly titles including the keyword: ${keywordTitle.value.trim()}${googleAskCheckbox.checked ? ' phrased like Google Ask style' : ''}`;
+                ? `Generate 20 simple "How to" titles including the keyword: ${currentTitleKeyword}${category ? ` for the category: ${category}` : ''}. Use plain language without fancy words or business names. Do not use the phrase "isn't just".`
+                : `Generate 20 simple titles including the keyword: ${currentTitleKeyword}${category ? ` for the category: ${category}` : ''}${googleAskCheckbox.checked ? ' phrased like Google Ask style' : ''}. Use plain language without fancy words or business names. Do not use the phrase "isn't just".`;
             
             try {
                 let response;
@@ -1688,7 +1721,13 @@
                     useBtn.className = 'btn btn-sm btn-outline-primary use-btn';
                     useBtn.textContent = 'Use';
                     useBtn.onclick = () => {
+                        // Copy title to content title input
                         contentTitleInput.value = t;
+                        
+                        // Copy keyword and category to content generation
+                        keywordContent.value = currentTitleKeyword;
+                        categoryInput.value = currentTitleCategory;
+                        
                         saveInputHistory();
                         updatePrompt();
                         useBtn.textContent = 'Used';
@@ -1699,7 +1738,7 @@
                             useBtn.classList.remove('btn-success');
                             useBtn.classList.add('btn-outline-primary');
                         }, 2000);
-                        showStatus(editorStatus, 'success', 'Title applied to content generator.');
+                        showStatus(editorStatus, 'success', 'Title, keyword, and category applied to content generator.');
                     };
                     const copyBtn = document.createElement('button');
                     copyBtn.className = 'btn btn-sm btn-outline-secondary copy-btn';
@@ -1764,8 +1803,8 @@
                 showStatus(contentStatus, 'error', prompt);
                 return;
             }
-            if (!keywordContent.value.trim() || !categoryInput.value.trim() || !yearInput.value.trim()) {
-                showStatus(contentStatus, 'error', 'Please fill Keyword, Category, and Year/Audience fields.');
+            if (!urlInput.value.trim() || !keywordContent.value.trim() || !categoryInput.value.trim() || !yearInput.value.trim()) {
+                showStatus(contentStatus, 'error', 'Please fill URL, Keyword, Category, and Year/Audience fields.');
                 return;
             }
             saveInputHistory();
@@ -2402,7 +2441,7 @@
         
         clearInputsBtn.onclick = () => {
             if (confirm('Clear all inputs?')) {
-                [keywordContent, categoryInput, yearInput, countryInput, suburbInput, contentTitleInput, maxWordsInput].forEach(el => el.value = '');
+                [urlInput, keywordContent, categoryInput, yearInput, countryInput, suburbInput, contentTitleInput, maxWordsInput].forEach(el => el.value = '');
                 [genHowToCheckbox, addTocCheckbox].forEach(cb => cb.checked = false);
                 outputPrompt.textContent = '';
                 updatePrompt();
@@ -2730,7 +2769,7 @@
         
         // Attach listeners
         function attachInputListeners() {
-            [keywordContent, categoryInput, yearInput, countryInput, suburbInput, contentTitleInput, maxWordsInput, keywordTitle].forEach(el => {
+            [urlInput, keywordContent, categoryInput, yearInput, countryInput, suburbInput, contentTitleInput, maxWordsInput, keywordTitle, titleCategory].forEach(el => {
                 el.addEventListener('input', () => {
                     saveInputHistory();
                     if (el.hasAttribute('required') && !el.value.trim()) {
